@@ -100,20 +100,6 @@ Notepad--  →  tsqlformatterndd.dll  →  PoorMansTSqlFormatterFmtCli.exe
 - **third_party/qscint/**：QScintilla 头文件，遵循其各自许可证。
 - **include/pluginGl.h**：源自 Notepad-- 插件 API。
 
-## 发布到 GitHub
-
-```powershell
-cd PoorMansTSqlFormatter-Notepad--Plugin
-git init
-git add .
-git commit -m "Initial commit: Notepad-- T-SQL formatter plugin with FmtCli"
-git branch -M main
-git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
-git push -u origin main
-```
-
-建议在 GitHub 仓库描述中注明：需要 Notepad-- 插件版 + .NET Framework 4.8。
-
 ## 致谢
 
 - [Poor Man's T-SQL Formatter](https://github.com/TaoK/PoorMansTSqlFormatter) — Tao Klerks
