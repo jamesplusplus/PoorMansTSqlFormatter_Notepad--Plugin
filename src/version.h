@@ -1,0 +1,1 @@
+#define NDD_TSQL_FORMATTER_VERSION "v1.7.0"

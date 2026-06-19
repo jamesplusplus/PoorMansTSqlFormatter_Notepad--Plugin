@@ -1,0 +1,24 @@
+/out/
+/release/
+/debug/
+/.obj/
+/.moc/
+/.ui/
+*.obj
+*.pdb
+*.exp
+Makefile
+Makefile.Debug
+Makefile.Release
+.qmake.stash
+*.user
+*.autosave
+
+# .NET build output
+**/bin/
+**/obj/
+*.suo
+
+# Keep staged deploy bundle ignored (rebuilt by scripts)
+# Uncomment if you want to commit release binaries:
+# !out/plugin/.gitkeep
