@@ -2,140 +2,184 @@
 
 [中文说明](README.zh-CN.md)
 
-A T-SQL formatting plugin for [Notepad--](https://github.com/cxasm/notepad--): a Qt/C++ plugin shell plus a C# command-line formatter (FmtCli).
+A T-SQL formatting plugin for [Notepad--](https://github.com/cxasm/notepad--): a Qt/C++ plugin shell plus a cross-platform C# formatter CLI (FmtCli on **.NET 8**).
 
 ## Features
 
 - Menu: **Plugins → T-SQL Formatter → Format T-SQL**
 - Shortcut: **Ctrl+Alt+F**
-- No selection: format the entire document; with a selection: format the selected text only
-- Options file: `%APPDATA%\ndd-tsqlformatter\formatter.ini`
+- No selection → format the entire document; with a selection → format selected text only
+- Options: `formatter.ini` under the app config directory (see [Configuration](#configuration))
+
+## Platform support
+
+| Component | Windows | Linux |
+|-----------|---------|-------|
+| FmtCli formatter | ✅ | ✅ |
+| Notepad-- plugin (`tsqlformatterndd`) | ✅ | 🔜 (FmtCli ready; plugin `.pro` / packaging pending) |
+
+**End users (Windows):** install Notepad-- (plugin edition), [.NET 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0), and copy the build output into the Notepad-- plugin folder.
 
 ## Repository layout
 
 ```
 ├── src/                          Notepad-- plugin (C++/Qt)
-├── include/pluginGl.h            Notepad-- plugin API header
-├── fmtcli/                       Formatter (C# / .NET Framework 4.8)
+├── include/pluginGl.h            Notepad-- plugin API
+├── fmtcli/                       Formatter (.NET 8)
 │   ├── PoorMansTSqlFormatterFmtCli/
 │   ├── PoorMansTSqlFormatterLib/
 │   └── PoorMansTSqlFormatterLibShared/
 ├── third_party/
 │   ├── qscint/                   QScintilla headers (compile-time only)
-│   └── ndd_importlib/            qmyedit_qt5.dll import library
+│   └── ndd_importlib/            qmyedit_qt5 import library (Windows)
 ├── scripts/
-│   ├── build-all.ps1             Build everything
-│   ├── build-fmtcli.ps1          Build FmtCli only
-│   ├── build.ps1                 Build FmtCli + plugin
-│   ├── deploy.ps1                Deploy to Notepad--
+│   ├── build-all.ps1             Build FmtCli + plugin (Windows)
+│   ├── build-fmtcli.ps1          Build FmtCli (Windows)
+│   ├── build-fmtcli.sh           Build FmtCli (Linux)
+│   ├── build.ps1                 Build plugin only
+│   ├── deploy.ps1                Deploy to Notepad-- (Windows)
+│   ├── package-release.ps1       Create release zip
 │   └── generate-qmyedit-importlib.ps1
+├── global.json                   .NET SDK pin
 ├── PoorMansTSqlFormatter-Notepad--Plugin.sln
 ├── tsqlformatterndd.pro
-└── out/plugin/                   Build output for deployment (git-ignored)
+├── releases/                     Release notes (Markdown)
+└── out/plugin/                   Build output (git-ignored)
 ```
 
 ## Requirements
 
-| Component | Version / notes |
-|-----------|-----------------|
-| Notepad-- (plugin edition) | Installed, includes `qmyedit_qt5.dll` |
-| Qt | 5.15.x, MSVC 2019 64-bit |
-| Visual Studio Build Tools | C++ workload + .NET Framework 4.8 targeting pack |
-| .NET 8 runtime | Required to run FmtCli ([download](https://dotnet.microsoft.com/download/dotnet/8.0)) |
+### Build
+
+| Component | Notes |
+|-----------|--------|
+| Notepad-- (plugin edition) | Provides `qmyedit_qt5.dll` / `libqmyedit_qt5.so` for linking |
+| Qt 5.15.x | MSVC 2019 64-bit on Windows; distro packages on Linux |
+| Visual Studio Build Tools | C++ workload (Windows plugin) |
+| [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) | Build FmtCli |
+
+### Run (end users)
+
+| Component | Notes |
+|-----------|--------|
+| Notepad-- with plugin support | |
+| [.NET 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0) | Required for framework-dependent FmtCli (recommended) |
 
 ## Build
+
+### Windows — full build
 
 ```powershell
 cd PoorMansTSqlFormatter-Notepad--Plugin
 .\scripts\build-all.ps1
 ```
 
-Output goes to `out\plugin\`:
-
-| File | Description |
-|------|-------------|
-| `tsqlformatterndd.dll` | Notepad-- plugin (~60 KB, dynamically links `qmyedit_qt5.dll`) |
-| `PoorMansTSqlFormatterFmtCli.exe` | stdin/stdout formatter |
-| `PoorMansTSqlFormatterLib.dll` | Core formatting library (framework-dependent build) |
-
-FmtCli targets **.NET 8** and runs on Windows and Linux. Build with `dotnet` 8 SDK:
+Optional:
 
 ```powershell
-.\scripts\build-fmtcli.ps1                     # Windows, framework-dependent
-.\scripts\build-fmtcli.ps1 -Runtime win-x64 -SelfContained -SingleFile   # optional single-file
+.\scripts\build-all.ps1 -QtRoot "D:\Qt\5.15.2\msvc2019_64"
+.\scripts\build-all.ps1 -RegenerateImportLib   # after upgrading Notepad--
+```
+
+### FmtCli only
+
+Framework-dependent (small; requires .NET 8 runtime on the target machine):
+
+```powershell
+.\scripts\build-fmtcli.ps1
+```
+
+Self-contained single-file (larger; no separate runtime install):
+
+```powershell
+.\scripts\build-fmtcli.ps1 -Runtime win-x64 -SelfContained -SingleFile
 ```
 
 Linux:
 
 ```bash
+chmod +x scripts/build-fmtcli.sh
 ./scripts/build-fmtcli.sh Release
-# or: RUNTIME=linux-x64 ./scripts/build-fmtcli.sh
+# RUNTIME=linux-x64 SELF_CONTAINED=false ./scripts/build-fmtcli.sh
 ```
 
-Optional flags:
-
-```powershell
-.\scripts\build-all.ps1 -QtRoot "D:\Qt\5.15.2\msvc2019_64"
-.\scripts\build-all.ps1 -RegenerateImportLib   # After upgrading Notepad--
-.\scripts\build-fmtcli.ps1                     # C# projects only
-```
-
-Verify the plugin links against the shared editor DLL:
+### Verify plugin linking (Windows)
 
 ```powershell
 dumpbin /imports out\plugin\tsqlformatterndd.dll | findstr qmyedit
 ```
 
-You should see `qmyedit_qt5.dll`. If the plugin DLL is much larger (~1.2 MB), it was likely linked statically by mistake.
+Expect `qmyedit_qt5.dll`. If the plugin is ~1.2 MB instead of ~60 KB, it was likely linked against a static library by mistake.
 
-## Deploy
+## Deploy output
 
-Close Notepad-- first. Use an **elevated** PowerShell if deploying under `Program Files`:
+After `build-all.ps1`, `out\plugin\` contains:
+
+| File | Description |
+|------|-------------|
+| `tsqlformatterndd.dll` | Notepad-- plugin (~60 KB) |
+| `PoorMansTSqlFormatterFmtCli.exe` | Formatter launcher |
+| `PoorMansTSqlFormatterFmtCli.dll` | Formatter assembly (.NET 8) |
+| `PoorMansTSqlFormatterFmtCli.deps.json` | Dependency manifest |
+| `PoorMansTSqlFormatterFmtCli.runtimeconfig.json` | Runtime config |
+| `PoorMansTSqlFormatterLib.dll` | Core formatting library |
+
+Copy **all of these** into the Notepad-- plugin directory. On Linux, the executable has no `.exe` extension (`PoorMansTSqlFormatterFmtCli`).
+
+### Install (Windows)
+
+Close Notepad-- first. Use an elevated shell if installing under `Program Files`:
 
 ```powershell
 .\scripts\deploy.ps1
 ```
 
-By default, files are copied to `C:\Program Files\Notepad--\plugin\`.
+Default target: `C:\Program Files\Notepad--\plugin\`
 
 ## Release package
 
-Build and create a distributable zip (version from `src/version.h`):
-
 ```powershell
 .\scripts\package-release.ps1
+.\scripts\package-release.ps1 -SkipBuild   # if out\plugin\ is already current
 ```
 
-Output:
+Output (version from `src/version.h`):
 
-- `dist\PoorMansTSqlFormatter-Notepad--Plugin-v1.7.0-win-x64\` — folder to upload or copy
-- `dist\PoorMansTSqlFormatter-Notepad--Plugin-v1.7.0-win-x64.zip` — GitHub Release asset
+- `dist\PoorMansTSqlFormatter-Notepad--Plugin-v1.7.0-win-x64\`
+- `dist\PoorMansTSqlFormatter-Notepad--Plugin-v1.7.0-win-x64.zip`
 
-Skip rebuild if `out\plugin\` is already up to date:
+Release descriptions: `releases/v1.7.0.md`. See [CHANGELOG.md](CHANGELOG.md).
 
-```powershell
-.\scripts\package-release.ps1 -SkipBuild
-```
+## Configuration
 
-See [CHANGELOG.md](CHANGELOG.md) for release notes.
+Formatter options are stored in `formatter.ini`:
+
+| OS | Typical path |
+|----|----------------|
+| Windows | `%APPDATA%\ndd-tsqlformatter\formatter.ini` |
+| Linux | `~/.config/ndd-tsqlformatter/formatter.ini` (via Qt `AppConfigLocation`) |
+
+Format: `OptionsSerialized=UppercaseKeywords=True,...`
 
 ## Architecture
 
 ```
-Notepad--  →  tsqlformatterndd.dll  →  PoorMansTSqlFormatterFmtCli.exe
-              (Qt plugin)                (stdin/stdout, .NET 4.8)
-                                           ↓
-                                    PoorMansTSqlFormatterLib.dll
+Notepad--  →  tsqlformatterndd.dll / .so  →  PoorMansTSqlFormatterFmtCli
+              (Qt/C++ plugin)                 (stdin/stdout, .NET 8)
+                                                ↓
+                                         PoorMansTSqlFormatterLib.dll
 ```
 
-The plugin invokes FmtCli through Win32 pipes, avoiding .NET inside the Qt plugin process. Editor reads/writes use Scintilla messages (`SendScintilla`) and dynamic linking to Notepad--'s bundled `qmyedit_qt5.dll`.
+- The plugin calls FmtCli in a **subprocess** (Win32 pipes on Windows, `QProcess` on Linux), so .NET is not loaded inside the editor process.
+- Editor I/O uses Scintilla messages (`SendScintilla`).
+- The plugin links **dynamically** to Notepad--'s shared editor library (`qmyedit_qt5.dll` / `.so`).
 
 ## License
 
-- **fmtcli/** (`PoorMansTSqlFormatterLib*`, `PoorMansTSqlFormatterFmtCli`): derived from [Poor Man's T-SQL Formatter](https://github.com/TaoK/PoorMansTSqlFormatter), [GNU AGPL v3](LICENSE.txt) (Copyright © 2011–2017 Tao Klerks).
-- **src/** (Notepad-- plugin shell): same AGPL v3, distributed with the formatter library.
-- **third_party/qscint/**: QScintilla headers, subject to their respective licenses.
-- **include/pluginGl.h**: derived from the Notepad-- plugin API.
+- **fmtcli/** — derived from [Poor Man's T-SQL Formatter](https://github.com/TaoK/PoorMansTSqlFormatter), [GNU AGPL v3](LICENSE.txt) (© 2011–2017 Tao Klerks)
+- **src/** — Notepad-- plugin shell, AGPL v3
+- **third_party/qscint/** — QScintilla headers (their respective licenses)
+- **include/pluginGl.h** — Notepad-- plugin API
 
 ## Acknowledgements
 
