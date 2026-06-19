@@ -1,40 +1,60 @@
 param(
     [ValidateSet("Release", "Debug")]
     [string]$Configuration = "Release",
+    [string]$Runtime = "",
+    [switch]$SelfContained,
+    [switch]$SingleFile,
     [switch]$SkipStage
 )
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$sln = Join-Path $projectRoot "PoorMansTSqlFormatter-Notepad--Plugin.sln"
+$fmtCliProject = Join-Path $projectRoot "fmtcli\PoorMansTSqlFormatterFmtCli\PoorMansTSqlFormatterFmtCli.csproj"
 
-$msbuild = Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft Visual Studio" -Recurse -Filter MSBuild.exe -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -match 'MSBuild\\Current\\Bin\\MSBuild.exe' -or $_.FullName -match 'MSBuild\\Current\\Bin\\amd64\\MSBuild.exe' } |
-    Select-Object -First 1 -ExpandProperty FullName
-
-if (-not $msbuild) {
-    $msbuild = Get-Command msbuild -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-}
-if (-not $msbuild) {
-    Write-Error "MSBuild not found. Install Visual Studio Build Tools with .NET Framework 4.8 targeting pack."
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+    Write-Error ".NET SDK not found. Install .NET 8 SDK: https://dotnet.microsoft.com/download/dotnet/8.0"
 }
 
-Write-Host "Building FmtCli ($Configuration) ..."
-& $msbuild $sln /t:PoorMansTSqlFormatterFmtCli /p:Configuration=$Configuration /v:m
+Write-Host "Building FmtCli ($Configuration, .NET 8) ..."
+
+if ($Runtime -or $SelfContained -or $SingleFile) {
+    if ([string]::IsNullOrWhiteSpace($Runtime)) {
+        $Runtime = "win-x64"
+    }
+    $publishArgs = @(
+        "publish", $fmtCliProject,
+        "-c", $Configuration,
+        "-r", $Runtime,
+        "--self-contained", ($(if ($SelfContained) { "true" } else { "false" }))
+    )
+    if ($SingleFile) {
+        $publishArgs += "-p:PublishSingleFile=true"
+    }
+    & dotnet @publishArgs
+} else {
+    & dotnet publish $fmtCliProject -c $Configuration --self-contained false
+}
+
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$fmtOut = Join-Path $projectRoot "fmtcli\PoorMansTSqlFormatterFmtCli\bin\$Configuration"
-$exe = Join-Path $fmtOut "PoorMansTSqlFormatterFmtCli.exe"
-$lib = Join-Path $fmtOut "PoorMansTSqlFormatterLib.dll"
+if ($Runtime) {
+    $fmtOut = Join-Path $projectRoot "fmtcli\PoorMansTSqlFormatterFmtCli\bin\$Configuration\net8.0\$Runtime\publish"
+    if (-not (Test-Path $fmtOut)) {
+        $fmtOut = Join-Path $projectRoot "fmtcli\PoorMansTSqlFormatterFmtCli\bin\$Configuration\net8.0\$Runtime"
+    }
+} else {
+    $fmtOut = Join-Path $projectRoot "fmtcli\PoorMansTSqlFormatterFmtCli\bin\$Configuration\net8.0\publish"
+    if (-not (Test-Path $fmtOut)) {
+        $fmtOut = Join-Path $projectRoot "fmtcli\PoorMansTSqlFormatterFmtCli\bin\$Configuration\net8.0"
+    }
+}
 
+$exe = Join-Path $fmtOut "PoorMansTSqlFormatterFmtCli.exe"
 if (-not (Test-Path $exe)) {
-    Write-Error "Build succeeded but exe not found: $exe"
+    $exe = Join-Path $fmtOut "PoorMansTSqlFormatterFmtCli"
 }
-if (-not (Test-Path $lib)) {
-    $lib = Join-Path $projectRoot "fmtcli\PoorMansTSqlFormatterLib\bin\$Configuration\PoorMansTSqlFormatterLib.dll"
-}
-if (-not (Test-Path $lib)) {
-    Write-Error "PoorMansTSqlFormatterLib.dll not found next to FmtCli output."
+if (-not (Test-Path $exe)) {
+    Write-Error "Build succeeded but executable not found under: $fmtOut"
 }
 
 Write-Host "OK: $exe"
@@ -42,7 +62,22 @@ Write-Host "OK: $exe"
 if (-not $SkipStage) {
     $stageDir = Join-Path $projectRoot "out\plugin"
     New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
-    Copy-Item -Force $exe (Join-Path $stageDir "PoorMansTSqlFormatterFmtCli.exe")
-    Copy-Item -Force $lib (Join-Path $stageDir "PoorMansTSqlFormatterLib.dll")
-    Write-Host "Staged FmtCli to $stageDir"
+
+    $stagePatterns = @(
+        "PoorMansTSqlFormatterFmtCli.exe",
+        "PoorMansTSqlFormatterFmtCli",
+        "PoorMansTSqlFormatterFmtCli.dll",
+        "PoorMansTSqlFormatterFmtCli.deps.json",
+        "PoorMansTSqlFormatterFmtCli.runtimeconfig.json",
+        "PoorMansTSqlFormatterLib.dll"
+    )
+
+    foreach ($pattern in $stagePatterns) {
+        $source = Join-Path $fmtOut $pattern
+        if (Test-Path $source) {
+            Copy-Item -Force $source (Join-Path $stageDir $pattern)
+        }
+    }
+
+    Write-Host "Staged FmtCli artifacts to $stageDir"
 }

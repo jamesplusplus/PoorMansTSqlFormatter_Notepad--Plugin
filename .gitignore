@@ -22,3 +22,5 @@ Makefile.Release
 # Keep staged deploy bundle ignored (rebuilt by scripts)
 # Uncomment if you want to commit release binaries:
 # !out/plugin/.gitkeep
+
+/dist/

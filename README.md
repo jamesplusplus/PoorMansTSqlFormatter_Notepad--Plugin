@@ -41,7 +41,7 @@ A T-SQL formatting plugin for [Notepad--](https://github.com/cxasm/notepad--): a
 | Notepad-- (plugin edition) | Installed, includes `qmyedit_qt5.dll` |
 | Qt | 5.15.x, MSVC 2019 64-bit |
 | Visual Studio Build Tools | C++ workload + .NET Framework 4.8 targeting pack |
-| .NET Framework 4.8 runtime | Required to run FmtCli (usually preinstalled on Windows) |
+| .NET 8 runtime | Required to run FmtCli ([download](https://dotnet.microsoft.com/download/dotnet/8.0)) |
 
 ## Build
 
@@ -56,7 +56,21 @@ Output goes to `out\plugin\`:
 |------|-------------|
 | `tsqlformatterndd.dll` | Notepad-- plugin (~60 KB, dynamically links `qmyedit_qt5.dll`) |
 | `PoorMansTSqlFormatterFmtCli.exe` | stdin/stdout formatter |
-| `PoorMansTSqlFormatterLib.dll` | Core formatting library |
+| `PoorMansTSqlFormatterLib.dll` | Core formatting library (framework-dependent build) |
+
+FmtCli targets **.NET 8** and runs on Windows and Linux. Build with `dotnet` 8 SDK:
+
+```powershell
+.\scripts\build-fmtcli.ps1                     # Windows, framework-dependent
+.\scripts\build-fmtcli.ps1 -Runtime win-x64 -SelfContained -SingleFile   # optional single-file
+```
+
+Linux:
+
+```bash
+./scripts/build-fmtcli.sh Release
+# or: RUNTIME=linux-x64 ./scripts/build-fmtcli.sh
+```
 
 Optional flags:
 
@@ -83,6 +97,27 @@ Close Notepad-- first. Use an **elevated** PowerShell if deploying under `Progra
 ```
 
 By default, files are copied to `C:\Program Files\Notepad--\plugin\`.
+
+## Release package
+
+Build and create a distributable zip (version from `src/version.h`):
+
+```powershell
+.\scripts\package-release.ps1
+```
+
+Output:
+
+- `dist\PoorMansTSqlFormatter-Notepad--Plugin-v1.7.0-win-x64\` — folder to upload or copy
+- `dist\PoorMansTSqlFormatter-Notepad--Plugin-v1.7.0-win-x64.zip` — GitHub Release asset
+
+Skip rebuild if `out\plugin\` is already up to date:
+
+```powershell
+.\scripts\package-release.ps1 -SkipBuild
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Architecture
 
@@ -114,7 +149,7 @@ git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
 git push -u origin main
 ```
 
-Mention in the repository description that users need Notepad-- (plugin edition) and .NET Framework 4.8.
+Mention in the repository description that users need Notepad-- (plugin edition) and the .NET 8 runtime.
 
 ## Acknowledgements
 

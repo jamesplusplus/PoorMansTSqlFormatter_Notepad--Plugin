@@ -41,7 +41,7 @@
 | Notepad--（插件版） | 已安装，含 `qmyedit_qt5.dll` |
 | Qt | 5.15.x，MSVC 2019 64-bit |
 | Visual Studio Build Tools | C++ 工作负载 + .NET Framework 4.8 开发包 |
-| .NET Framework 4.8 运行时 | 运行 FmtCli（Windows 通常已预装） |
+| .NET 8 运行时 | 运行 FmtCli（[下载](https://dotnet.microsoft.com/download/dotnet/8.0)） |
 
 ## 编译
 
@@ -56,7 +56,21 @@ cd PoorMansTSqlFormatter-Notepad--Plugin
 |------|------|
 | `tsqlformatterndd.dll` | Notepad-- 插件（约 60 KB，动态链接 `qmyedit_qt5.dll`） |
 | `PoorMansTSqlFormatterFmtCli.exe` | stdin/stdout 格式化器 |
-| `PoorMansTSqlFormatterLib.dll` | 格式化核心库 |
+| `PoorMansTSqlFormatterLib.dll` | 格式化核心库（框架依赖部署时） |
+
+FmtCli 基于 **.NET 8**，可在 Windows / Linux 运行。需安装 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) 编译：
+
+```powershell
+.\scripts\build-fmtcli.ps1
+.\scripts\build-fmtcli.ps1 -Runtime win-x64 -SelfContained -SingleFile   # 可选：单文件自包含
+```
+
+Linux：
+
+```bash
+chmod +x scripts/build-fmtcli.sh
+./scripts/build-fmtcli.sh Release
+```
 
 可选参数：
 
@@ -81,6 +95,27 @@ dumpbin /imports out\plugin\tsqlformatterndd.dll | findstr qmyedit
 ```
 
 默认复制到 `C:\Program Files\Notepad--\plugin\`。
+
+## 发布包
+
+编译并打包（版本号来自 `src/version.h`）：
+
+```powershell
+.\scripts\package-release.ps1
+```
+
+输出：
+
+- `dist\PoorMansTSqlFormatter-Notepad--Plugin-v1.7.0-win-x64\` — 可直接分发
+- `dist\PoorMansTSqlFormatter-Notepad--Plugin-v1.7.0-win-x64.zip` — 适合 GitHub Release
+
+若 `out\plugin\` 已是最新，可跳过编译：
+
+```powershell
+.\scripts\package-release.ps1 -SkipBuild
+```
+
+详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 架构
 
@@ -112,7 +147,7 @@ git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
 git push -u origin main
 ```
 
-建议在 GitHub 仓库描述中注明：需要 Notepad-- 插件版 + .NET Framework 4.8。
+建议在 GitHub 仓库描述中注明：需要 Notepad-- 插件版 + .NET 8 运行时。
 
 ## 致谢
 
