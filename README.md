@@ -137,20 +137,6 @@ The plugin invokes FmtCli through Win32 pipes, avoiding .NET inside the Qt plugi
 - **third_party/qscint/**: QScintilla headers, subject to their respective licenses.
 - **include/pluginGl.h**: derived from the Notepad-- plugin API.
 
-## Publish to GitHub
-
-```powershell
-cd PoorMansTSqlFormatter-Notepad--Plugin
-git init
-git add .
-git commit -m "Initial commit: Notepad-- T-SQL formatter plugin with FmtCli"
-git branch -M main
-git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
-git push -u origin main
-```
-
-Mention in the repository description that users need Notepad-- (plugin edition) and the .NET 8 runtime.
-
 ## Acknowledgements
 
 - [Poor Man's T-SQL Formatter](https://github.com/TaoK/PoorMansTSqlFormatter) — Tao Klerks
